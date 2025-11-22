@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .join { color: green; font-style: italic; }
+        .leave { color: red; font-style: italic; }
+        .system { color: blue; font-weight: bold; }
+        input {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .login-form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Chat</h1>
+    
+    <div id="login" class="login-form">
+        <input type="text" id="username" placeholder="Username">
+        <input type="text" id="room" placeholder="Room name">
+        <button onclick="connect()">Join Chat</button>
+    </div>
+
+    <div id="chat" style="display:none;">
+        <div id="messages"></div>
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let ws;
+        let username;
+        let room;
+
+        function connect() {
+            username = document.getElementById('username').value;
+            room = document.getElementById('room').value;
+
+            if (!username || !room) {
+                alert('Please enter username and room');
+                return;
+            }
+
+            ws = new WebSocket(`ws://localhost:8080/ws?username=${username}&room=${room}`);
+
+            ws.onopen = function() {
+                document.getElementById('login').style.display = 'none';
+                document.getElementById('chat').style.display = 'block';
+                addMessage('system', 'Connected to chat!');
+            };
+
+            ws.onmessage = function(event) {
+                const msg = JSON.parse(event.data);
+                addMessage(msg.type, `${msg.username}: ${msg.content}`);
+            };
+
+            ws.onclose = function() {
+                addMessage('system', 'Disconnected from chat');
+            };
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value;
+
+            if (message && ws) {
+                ws.send(message);
+                input.value = '';
+            }
+        }
+
+        function addMessage(type, text) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
